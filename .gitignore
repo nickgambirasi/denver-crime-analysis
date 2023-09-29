@@ -1,0 +1,26 @@
+#####################################################################
+# THIS IS PROJECT .GITIGNORE FILE FOR THE DENVER CRIME ANALYSIS
+# PROJECT. 
+
+# CREATED BY: Nicholas Gambirasi
+# CREATED ON: 29 September 2023
+# LAST UPDATED: 29 September 2023
+
+# NOTE: ALL PYTHON SCRIPT FILES SHOULD BE INCLUDED, BUT JUPYTER
+# NOTEBOOKS SHOULD BE AVOIDED (THEY WILL DOMINATE THE CODE BASE
+# COMPOSITION). DATA FILES SHOULD ALSO BE IGNORED, AS THEY ARE
+# LARGE, WOULD REQUIRE GIT LFS, AND ARE ALREADY AVAILABLE FOR
+# DOWNLOAD FROM THE CLOUD
+#####################################################################
+
+# ignore pycache files
+/__pycache__
+
+# ignore notebook checkpoints
+/ipynb_checkpoints
+
+# Ingore Notebook Files
+/notebooks
+
+# Ignore Data Files (.csv only for now, could be other formats)
+/data
