@@ -122,8 +122,9 @@ def plot_data(**kwargs) -> bool:
     # that there has been an error processing the file
     processed_flag: bool = False
     try:
-        data = pd.read_csv(os.path.join(DATA_DIR, 'crime_processed.csv'))
-        processed_flag = True
+        with open(os.path.join(DATA_DIR, 'crime_processed.csv'), 'r') as f:
+            data = pd.read_csv(os.path.join(DATA_DIR, 'crime_processed.csv'), encoding=f.encoding)
+            processed_flag = True
 
     except FileNotFoundError as e:
         # if we reach here, there doesn't exist a file called
@@ -131,7 +132,8 @@ def plot_data(**kwargs) -> bool:
         # `crime.csv` instead
 
         try:
-            data = pd.read_csv(os.path.join(DATA_DIR, 'crime.csv'))
+            with open(os.path.join(DATA_DIR, 'crime.csv'), 'r') as f:
+                data = pd.read_csv(os.path.join(DATA_DIR, 'crime.csv'), encoding=f.encoding)
 
         except FileNotFoundError as e:
             print("Could not read from either `crime_processed.csv` or `crime.csv`")
