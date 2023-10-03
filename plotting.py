@@ -21,8 +21,10 @@ import pandas as pd
 # bokeh objects for generating plots
 from bokeh.models import ColumnDataSource
 from bokeh.plotting import figure
-from bokeh.palettes import Bright6
+from bokeh.palettes import Bright6, Bokeh6
 from bokeh.io import export_png
+
+from math import pi
 
 # custom exceptions for error handling
 from custom_exceptions import UnsupportedPlotError, NanException
@@ -141,12 +143,20 @@ def plot_data(**kwargs) -> bool:
     # in the data so that we can easily access the month and year data that
     # we will need for the plots
     if crimes_by_year:
-        flag = plot_crimes_by_year(data=data, outfile_name="crimes_by_year")
+        crimes_by_year_flag = plot_crimes_by_year(data=data, outfile_name="crimes_by_year")
         # this either plots what we're looking for and returns True, or errors and
         # returns false
-        if not flag:
+        if not crimes_by_year_flag:
             print("There was an error plotting the number of crimes per year from the data")
             return False 
+        
+    if crimes_by_month:
+        crimes_by_month_flag = plot_crimes_by_month(data=data, outfile_name="crimes_by_month", sort_months='year_order')
+
+        if not crimes_by_month_flag:
+            print("There was an error plotting the number of crimes per months from the data")
+            return False
+        
     return True
 
 def plot_crimes_by_year(data: pd.DataFrame, outfile_name: str) -> bool:
@@ -162,7 +172,7 @@ def plot_crimes_by_year(data: pd.DataFrame, outfile_name: str) -> bool:
         "reported_date" in data.columns
     ), "column `reported_date` expected by not found in dataframe columns"
 
-    data["reported_date"] = pd.to_datetime(data["reported_date"])
+    data["reported_date"] = pd.to_datetime(data["reported_date"], format='mixed')
 
     try:
         # if we wish to plot the crime count by year, the `crime_year` column
@@ -226,6 +236,134 @@ def plot_crimes_by_year(data: pd.DataFrame, outfile_name: str) -> bool:
         print("There was an error saving the plot to the specified location")
         return False
     
+def plot_crimes_by_month(data: pd.DataFrame, outfile_name: str, sort_months: str = ['count_order', 'year_order']) -> bool:
 
+    """
+    Function that plots a vertical bar chart of 
+    the crimes by month, with multiple colors in each
+    bar corresponding to the year...returns a boolean
+    flag indicating the the plot has been successfully
+    generated
+    """
+    assert(
+        "reported_date" in data.columns
+    ), "column `reported_date` expected but not found in columns"
+
+    data["reported_date"] = pd.to_datetime(data["reported_date"], format='mixed')
+
+    try:
+        # if we wish to plot the crime count by year, the `crime_year` column
+        # must be created by grabbing a the year of the reported date
+        data["crime_year"] = data["reported_date"].apply(lambda x: x.year)
+
+        # we can quickly do a sanity check to ensure that there are no NaNs in
+        # the collected crime year data
+        num_year_nas = sum([int(x) for x in data["crime_year"].isna()])
+        if num_year_nas:
+            raise NanException("Collecting the years in which crimes occurred yielded NaN values")
+
+        # repeat the previous process, but with the crime months
+
+        # define month map
+        MONTHS_MAP = {
+            '1': 'jan',
+            '2': 'feb',
+            '3': 'mar',
+            '4': 'apr',
+            '5': 'may',
+            '6': 'jun',
+            '7': 'jul',
+            '8': 'aug',
+            '9': 'sep',
+            '10': 'oct',
+            '11': 'nov',
+            '12': 'dec'
+        }
+        data["crime_month"] = data["reported_date"].apply(lambda x: x.month)
+        data["crime_month"] = data["crime_month"].apply(lambda x: MONTHS_MAP[str(x)])
+
+        num_month_nas = sum([int(x) for x in data["crime_month"].isna()])
+        if num_month_nas:
+            raise NanException("Collecting the months in which crimes occurred yielded NaN values")
+        
+        crimes_by_month = data["crime_month"].value_counts().to_dict()
+
+        match sort_months:
+
+            case 'count_order':
+                # collect the total number of crimes in each month and order the keys
+                ordered_months = sorted(crimes_by_month, key=lambda x: crimes_by_month[x])
+
+            case 'year_order':
+
+                ordered_months = list(MONTHS_MAP.values())
+
+        # add the ordered keys
+        for_plot = {
+            'months': ordered_months
+        }
+
+        # we now iterate through the years of the crime data and get the crime
+        # counts for each month in the order specified on the list
+        for year in data["crime_year"].unique():
+
+            year_crime_counts = data.query("crime_year == @year")["crime_month"].value_counts().to_dict()
+            ordered_year_by_month_counts = []
+
+            for month in ordered_months:
+
+                ordered_year_by_month_counts.append(year_crime_counts.get(month, 0))
+
+            for_plot.update({
+                str(year): ordered_year_by_month_counts
+            })
+
+        # we now build the plot of crimes by month, with different colors for
+        # each year
+        years = sorted([str(x) for x in for_plot.keys() if x != 'months'])
+
+    except Exception as e:
+        print("There was an error processing the data prior to plotting")
+        return False
+
+    # we now build the plot of crimes by month, with different colors for
+    # each year
+    try:
+
+        p = figure(
+            x_range=ordered_months,
+            y_range=(0, max(crimes_by_month.values()) + 10000),
+            height=350,
+            width=900,
+            title="Crime Counts by Month",
+            toolbar_location=None,
+            tools="hover",
+            tooltips="$name @months: @$name"
+        )
+
+        p.vbar_stack(years, x='months', width=0.9, color=Bokeh6, source=for_plot, legend_label=years)
+
+        p.title.align="center"
+        p.y_range.start = 0
+        p.x_range.range_padding = 0.1
+        p.xgrid.grid_line_color=None
+        p.axis.minor_tick_line_color = None
+        p.outline_line_color = None
+        p.legend.location = "top_left"
+        p.legend.orientation = "horizontal"
+        p.xaxis.major_label_orientation = pi/4
+
+    except Exception as e:
+
+        print("There was an error plotting the data")
+        return False
     
+    try:
 
+        export_png(p, filename=os.path.join(PLOTS_DIR, f"{outfile_name}.png"))
+    
+    except Exception as e:
+
+        print("There was an error saving the file to the specified location")
+    
+    return True
