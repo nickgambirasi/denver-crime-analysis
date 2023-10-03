@@ -64,10 +64,14 @@ if num_actions > 2:
 elif num_actions == 2 and 'all' in actions:
     raise ActionArgumentsException("`all` cannot be included with other action arguments")
 
+if 'all' in actions:
+
+    actions = ['collect', 'process', 'plot']
+
 # given a list of arguments, pop the argument off of the list and
 # execute the associated process
 while actions:
-    match actions.pop():
+    match actions.pop(0):
         # run data collection code
         case 'collect':
             flag = collect_data()
@@ -80,24 +84,14 @@ while actions:
                 sys.exit("There was an error processing the data")
 
         case 'plot':
-            flag = plot_data(crimes_by_year=True)
+            flag = plot_data(crimes_by_year=True, crimes_by_month=True)
             if not flag:
                 sys.exit("There was an error generating plots for the data")
 
         case _:
 
-            data_collection_flag = collect_data()
-            if not data_collection_flag:
-                sys.exit("There was an error collecting the data")
+            pass
 
-            data_processing_flag = process_data()
-            if not data_processing_flag:
-                sys.exit("There was an error processing the data")
-              
-            data_plotting_flag = plot_data(crimes_by_year=True)
-            if not data_plotting_flag:
-                sys.exit("There was an error generating plots for the data")
-
-print("Successfully performed all actions")
+print("Successfully performed all specified actions")
 
 
