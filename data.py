@@ -120,11 +120,12 @@ def process_data(drop_columns: List[str]=None, handle_na: str=None, normalizatio
     # assert that all of the sepcified columns are in the dataframe,
     # then drop them in place
     assert(
-        all(drop_columns in frame.columns)
+        drop_columns is None or set(drop_columns).issubset(set(frame.solumns))
     ), "drop_columns included a column name not present in dataframe"
 
     try:
-        frame.drop(columns=drop_columns, inplace=True)
+        if drop_columns is not None:
+            frame.drop(columns=drop_columns, inplace=True)
     except Exception as e:
         print("There was an error dropping the specified columns from the dataframe")
         return False
