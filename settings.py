@@ -13,3 +13,4 @@ this project collects and analyzes its data.
 import os
 
 DATA_DIR = "./data"
+PLOTS_DIR = "./plots"

@@ -22,6 +22,7 @@ from custom_exceptions import ActionArgumentsException
 
 # data functions
 from data import collect_data, process_data
+from plotting import plot_data
 
 # argument parser for the command line
 parser = ArgumentParser()
@@ -74,18 +75,29 @@ while actions:
                 sys.exit("There was an error collecting the data")
 
         case 'process':
-            flag = process_data()
+            flag = process_data(normalization='lower')
             if not flag:
                 sys.exit("There was an error processing the data")
 
         case 'plot':
-            flag = plot_data()
-
-        # include action argument for plotting data
-        # and action argument for all actions
+            flag = plot_data(crimes_by_year=True)
+            if not flag:
+                sys.exit("There was an error generating plots for the data")
 
         case _:
 
-            pass
+            data_collection_flag = collect_data()
+            if not data_collection_flag:
+                sys.exit("There was an error collecting the data")
+
+            data_processing_flag = process_data()
+            if not data_processing_flag:
+                sys.exit("There was an error processing the data")
+              
+            data_plotting_flag = plot_data(crimes_by_year=True)
+            if not data_plotting_flag:
+                sys.exit("There was an error generating plots for the data")
+
+print("Successfully performed all actions")
 
 
