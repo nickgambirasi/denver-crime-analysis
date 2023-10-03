@@ -20,7 +20,7 @@ class ActionArgumentsException(BaseException):
     def __init__(self, message):
 
         self.message = message
-        super.__init__(self.message)
+        super().__init__(self.message)
 
 class UnsupportedFileTypeError(BaseException):
 
@@ -32,4 +32,29 @@ class UnsupportedFileTypeError(BaseException):
     def __init__(self, message):
 
         self.message = message
-        super.__init__(self.message)
+        super().__init__(self.message)
+
+class UnsupportedPlotError(BaseException):
+
+    """
+    Raised when an unsupported plot argument is declared
+    when calling the `plotting.plot_data` function
+    """
+
+    def __init__(self, message):
+
+        self.message = message
+        super().__init__(self.message)
+
+class NanException(BaseException):
+
+    """
+    Raised when processing of the data in preparation
+    for plotting generates NaN values in the new
+    columns
+    """
+
+    def __init__(self, message):
+
+        self.message = message
+        super().__init__(self.message)
