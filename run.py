@@ -87,7 +87,8 @@ while actions:
             flag = plot_data(
                 crimes_by_year=True,
                 crimes_by_month=True,
-                crimes_by_type=True
+                crimes_by_type=True,
+                crimes_by_season=True
             )
             
             if not flag:
