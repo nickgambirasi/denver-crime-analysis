@@ -106,7 +106,7 @@ def plot_data(**kwargs) -> bool:
 
     # define supported plots to verify that no extra arguments
     # are included
-    SUPPORTED_PLOTS = {"crimes_by_year", "crimes_by_month", "crimes_by_type"}
+    SUPPORTED_PLOTS = {"crimes_by_year", "crimes_by_month", "crimes_by_type", "crimes_by_season"}
     if not set(kwargs.keys()).issubset(SUPPORTED_PLOTS):
         raise UnsupportedPlotError(f"Arguments contain an unsupported plot. Supported plots are {SUPPORTED_PLOTS}")
  
@@ -116,6 +116,7 @@ def plot_data(**kwargs) -> bool:
     crimes_by_year = kwargs.get("crimes_by_year", False)
     crimes_by_month = kwargs.get("crimes_by_month", False)
     crimes_by_type = kwargs.get("crimes_by_type", False)
+    crimes_by_season = kwargs.get("crimes_by_season", False)
 
     # We try reading from the processed file first, if
     # the file exists, set a variable indicating that
@@ -170,6 +171,14 @@ def plot_data(**kwargs) -> bool:
 
         if not crimes_by_type_flag:
             print("There was an error plotting the number of crimes by type from the data")
+            return False
+        
+    if crimes_by_season:
+
+        by_season_flag = plot_crimes_by_season(data=data, outfile_name="crimes_by_season", season_order='year')
+
+        if not by_season_flag:
+            print("There was an error plotting the crimes count by season")
             return False
         
     return True
@@ -384,6 +393,13 @@ def plot_crimes_by_month(data: pd.DataFrame, outfile_name: str, sort_months: str
 
 def plot_crimes_by_type(data: pd.DataFrame, outfile_name: str) -> bool:
 
+    """
+    Plots the number of crimes that occurred by the type of crime in
+    the report...returns a boolean flag that indicates whether the
+    data was plotted, or whether there were errors during the data
+    processing and plotting process
+    """
+
     assert(
         {"reported_date", "offense_type_id"}.issubset(set(data.columns))
     ), "columns `reported_date` and `offense_type_id` expected but not found in dataset"
@@ -473,6 +489,143 @@ def plot_crimes_by_type(data: pd.DataFrame, outfile_name: str) -> bool:
 
     except Exception as e:
         print("There was an error saving the plot to the specified directory")
+        return False
+    
+    return True
+
+def plot_crimes_by_season(data: pd.DataFrame, outfile_name: str, season_order: str=['year', 'frequency']) -> bool:
+
+    """
+    Function to plot the crime by the season of the year
+    in which they occur. Returns a boolean flag indicating
+    whether the plot was generated successfully, or if there
+    were errors during the plotting process
+    """
+    # check that the necessary columns are in the data
+    assert(
+        'reported_date' in data.columns
+    ), "column `reported_date` expected but not found in the dataframe"
+
+    # convert the reported_date to a datetime object
+    data["reported_date"] = pd.to_datetime(data["reported_date"], format='mixed')
+
+    try:
+        # collect the month and year reported of each crime
+        data["reported_year"] = data["reported_date"].apply(lambda x: x.year)
+        data["reported_month"] = data["reported_date"].apply(lambda x: x.month)
+
+        # generate the reported season using the reportead month and the 
+        # below month that maps the months to seasons:
+
+        #   Dec - Feb -> Winter
+        #   Mar - May -> Spring
+        #   Jun - Aug -> Summer
+        #   Sep - Nov -> Fall
+
+        MONTH_TO_SEASON = {
+            1: 'winter',
+            2: 'winter',
+            3: 'spring',
+            4: 'spring',
+            5: 'spring',
+            6: 'summer',
+            7: 'summer',
+            8: 'summer',
+            9: 'fall',
+            10: 'fall',
+            11: 'fall',
+            12: 'winter'
+        }
+        
+        data["reported_season"] = data["reported_month"].apply(lambda x: MONTH_TO_SEASON[x])
+
+        # count the number of crimes that occur in each season and sort the seasons
+        # as defined by the user
+        crimes_by_season = data["reported_season"].value_counts().to_dict()
+
+        match season_order:
+
+            case 'year':
+
+                ordered_seasons = ['winter', 'spring', 'summer', 'fall']
+
+            case 'frequency':
+
+                ordered_seasons = sorted(crimes_by_season, key=lambda x: crimes_by_season[x])
+
+            case _:
+
+                pass
+            
+        # create the plotted data by iterating through the years and the
+        # ordered seasons, getting the counts of crimes for each season
+        # by year
+        for_plot = {
+            'seasons': ordered_seasons
+        }
+
+        years = sorted(data["reported_year"].unique())
+
+        for year in years:
+
+            year_seasonal_crime = data.query("reported_year == @year")["reported_season"].value_counts().to_dict()
+
+            ordered_season_crime_counts = []
+
+            for season in ordered_seasons:
+
+                ordered_season_crime_counts.append(year_seasonal_crime.get(season, 0))
+
+            for_plot.update({
+                str(year): ordered_season_crime_counts
+            })
+
+        str_years = [str(year) for year in years]
+
+    except Exception as e:
+        print("There was an error processing the data prior to plotting")
+        return False
+    
+    # create the figure for saving to the image file
+    try:
+
+        p = figure(
+            x_range=ordered_seasons,
+            y_range=(0, max(crimes_by_season.values()) + 10000),
+            height=350,
+            title="Crime Counts by Season",
+            toolbar_location=None
+        )
+
+        p.vbar_stack(
+            str_years,
+            x="seasons",
+            width=0.9,
+            color=Bokeh6,
+            source=for_plot,
+            legend_label=str_years
+        )
+
+        p.title.align="center"
+        p.y_range.start = 0
+        p.x_range.range_padding = 0.1
+        p.xgrid.grid_line_color=None
+        p.axis.minor_tick_line_color = None
+        p.outline_line_color = None
+        p.legend.location = "top_left"
+        p.legend.orientation = "horizontal"
+        p.xaxis.major_label_orientation = pi/4
+
+    except Exception as e:
+        print("There was an error generating the plot of crime counts by season")
+        return False
+    
+    # save the generated plot to the specified file location
+    try:
+        export_png(p, filename=os.path.join(PLOTS_DIR, f"{outfile_name}.png"))
+
+    except Exception as e:
+        print("There was an error saving the generated plot to the specified directory")
         return False
     
     return True
