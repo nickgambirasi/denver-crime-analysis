@@ -84,7 +84,12 @@ while actions:
                 sys.exit("There was an error processing the data")
 
         case 'plot':
-            flag = plot_data(crimes_by_year=True, crimes_by_month=True)
+            flag = plot_data(
+                crimes_by_year=True,
+                crimes_by_month=True,
+                crimes_by_type=True
+            )
+            
             if not flag:
                 sys.exit("There was an error generating plots for the data")
 
