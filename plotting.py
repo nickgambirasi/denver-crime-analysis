@@ -384,6 +384,13 @@ def plot_crimes_by_month(data: pd.DataFrame, outfile_name: str, sort_months: str
 
 def plot_crimes_by_type(data: pd.DataFrame, outfile_name: str) -> bool:
 
+    """
+    Plots the number of crimes that occurred by the type of crime in
+    the report...returns a boolean flag that indicates whether the
+    data was plotted, or whether there were errors during the data
+    processing and plotting process
+    """
+
     assert(
         {"reported_date", "offense_type_id"}.issubset(set(data.columns))
     ), "columns `reported_date` and `offense_type_id` expected but not found in dataset"
@@ -476,3 +483,21 @@ def plot_crimes_by_type(data: pd.DataFrame, outfile_name: str) -> bool:
         return False
     
     return True
+
+def plot_crimes_by_season(data: pd.DataFrame, outfile_name: str, season_order: str=['year', 'frequency']) -> bool:
+
+    """
+    Function to plot the crime by the season of the year
+    in which they occur. Returns a boolean flag indicating
+    whether the plot was generated successfully, or if there
+    were errors during the plotting process
+    """
+    # check that the necessary columns are in the data
+    assert(
+        'reported_date' in data.columns
+    ), "column `reported_date` expected but not found in the dataframe"
+
+    # convert the reported_date to a datetime object
+    data["reported_date"] = pd.to_datetime(data["reported_date"], format='mixed')
+
+    
