@@ -462,3 +462,111 @@ def plot_crimes_by_season(data: pd.DataFrame, outfile_name: str, season_order: s
         return False
     
     return True
+
+def plot_crimes_by_neighborhood(data: pd.DataFrame, order_neighborhoods: str=['frequency', 'alphabetical'], outfile_name=str) -> bool:
+
+    """
+    Function to plot the crimes that occurred by year in the neighborhood
+    """
+    assert(
+        {'reported_date', 'neighborhood_id'}.issubset(set(data.columns))
+    ), "columns `reported_date` and `neighborhood_id` expected but nor present in the dataframe"
+
+    # convert the reported year into datetime format, then
+    # collect the year of the crimes into its own column
+    data["reported_date"] = pd.to_datetime(data["reported_date"], format="mixed")
+    data["reported_year"] = data["reported_date"].apply(lambda x: x.year)
+
+    # first count the total number of crimes that appear by neighborhood
+    # then order the neighborhoods based on the method specified by the
+    # user
+    crime_counts_by_neighborhood = data["neighborhood_id"].value_counts().to_dict()
+
+    match order_neighborhoods:
+
+        case "frequency":
+
+            ordered_neighborhoods = sorted(crime_counts_by_neighborhood, key=lambda x: crime_counts_by_neighborhood[x])
+
+        case "alphabetical":
+
+            ordered_neighborhoods = sorted(list(crime_counts_by_neighborhood.keys()))
+
+        case _:
+
+            pass
+
+    # create the data used to build the bokeh plot, starting with the ordered neighborhoods
+    for_plot = {
+        'neighborhoods': ordered_neighborhoods,
+    }
+    try:
+        # iterate through the years and get the counts by year for each neighborhood
+        # in the ordered neighborhoods list
+        for year in sorted(data["reported_year"].unique()):
+
+            year_crimes = data.query("reported_year == @year")["neighborhood_id"].value_counts().to_dict()
+
+            crime_counts_neighborhood_year = []
+
+            for nhood in ordered_neighborhoods:
+
+                crime_counts_neighborhood_year.append(year_crimes.get(nhood, 0))
+
+            for_plot.update({
+                str(year): crime_counts_neighborhood_year
+            })
+        
+        years = [key for key in for_plot.keys() if key != 'neighborhoods']
+
+    except Exception as e:
+        print("There was an error processing the data prior to plotting")
+        return False
+    
+    # create the figure for saving to the image file
+    try:
+
+        p = figure(
+            x_range=ordered_neighborhoods,
+            y_range=(0, max(crime_counts_by_neighborhood.values()) + 10000),
+            height=350,
+            width=1500,
+            title="Crime Counts by Neighborhood",
+            toolbar_location=None
+        )
+
+        p.vbar_stack(
+            years,
+            x="neighborhoods",
+            width=0.9,
+            color=Bokeh6,
+            source=for_plot,
+            legend_label=years
+        )
+
+        p.title.align="center"
+        p.y_range.start = 0
+        p.x_range.range_padding = 0.1
+        p.xgrid.grid_line_color=None
+        p.axis.minor_tick_line_color = None
+        p.outline_line_color = None
+        p.legend.location = "top_left"
+        p.legend.orientation = "horizontal"
+        p.xaxis.major_label_orientation = pi/4
+
+    except Exception as e:
+        print("There was an error generating the plot of crime counts by season")
+        return False
+    
+    # save the generated plot to the specified file location
+    try:
+        export_png(p, filename=os.path.join(PLOTS_DIR, f"{outfile_name}.png"))
+
+    except Exception as e:
+        print("There was an error saving the generated plot to the specified directory")
+        return False
+    
+    return True
+
+
+    

@@ -22,7 +22,8 @@ import pandas as pd
 from utils import validate
 
 # import plotting functions from plotting_utils
-from plotting_utils import plot_crimes_by_month, plot_crimes_by_season, plot_crimes_by_type, plot_crimes_by_year
+from plotting_utils import plot_crimes_by_month, plot_crimes_by_season, plot_crimes_by_type, plot_crimes_by_year, \
+    plot_crimes_by_neighborhood
 
 # import custom unsupported plot error
 from custom_exceptions import UnsupportedPlotError
@@ -57,12 +58,12 @@ def plot_data(**kwargs) -> bool:
         - `crimes_by_type`: plots the counts of
             crimes that have been reported per crime type
 
-
-    Arguments to be supported in the future:
-
-        - `crimes_by_season`: plots the count of crimes
+        - `crimes_by_season`: plots the counts of crimes
             that have occurred in each season, beginning
             with winter 2018 and ending with fall 2023
+
+
+    Arguments to be supported in the future:
 
         - `crimes_by_neighborhood`: plots the count of
             crimes that have occurred in each neighbor-
@@ -104,7 +105,7 @@ def plot_data(**kwargs) -> bool:
 
     # define supported plots to verify that no extra arguments
     # are included
-    SUPPORTED_PLOTS = {"crimes_by_year", "crimes_by_month", "crimes_by_type", "crimes_by_season"}
+    SUPPORTED_PLOTS = {"crimes_by_year", "crimes_by_month", "crimes_by_type", "crimes_by_season", "crimes_by_neighborhood"}
     if not set(kwargs.keys()).issubset(SUPPORTED_PLOTS):
         raise UnsupportedPlotError(f"Arguments contain an unsupported plot. Supported plots are {SUPPORTED_PLOTS}")
  
@@ -115,6 +116,7 @@ def plot_data(**kwargs) -> bool:
     crimes_by_month = kwargs.get("crimes_by_month", False)
     crimes_by_type = kwargs.get("crimes_by_type", False)
     crimes_by_season = kwargs.get("crimes_by_season", False)
+    crimes_by_neighborhood = kwargs.get("crimes_by_neighborhood", False)
 
     # We try reading from the processed file first, if
     # the file exists, set a variable indicating that
@@ -177,6 +179,14 @@ def plot_data(**kwargs) -> bool:
 
         if not by_season_flag:
             print("There was an error plotting the crimes count by season")
+            return False
+        
+    if crimes_by_neighborhood:
+
+        by_neighborhood_flag = plot_crimes_by_neighborhood(data=data, order_neighborhoods='alphabetical', outfile_name="crimes_by_neighborhood")
+
+        if not by_neighborhood_flag:
+            print("There was an error plotting the crime counts by neighborhood")
             return False
         
     return True
