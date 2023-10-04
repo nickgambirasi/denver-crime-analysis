@@ -56,6 +56,10 @@ def plot_data(**kwargs) -> bool:
             that took place in each month, beginning with
             January 2018 and ending with September 2023
 
+        - `crimes_by_type`: plots the counts of
+            crimes that have been reported per crime type
+
+
     Arguments to be supported in the future:
 
         - `crimes_by_season`: plots the count of crimes
@@ -102,7 +106,7 @@ def plot_data(**kwargs) -> bool:
 
     # define supported plots to verify that no extra arguments
     # are included
-    SUPPORTED_PLOTS = {"crimes_by_year", "crimes_by_month"}
+    SUPPORTED_PLOTS = {"crimes_by_year", "crimes_by_month", "crimes_by_type"}
     if not set(kwargs.keys()).issubset(SUPPORTED_PLOTS):
         raise UnsupportedPlotError(f"Arguments contain an unsupported plot. Supported plots are {SUPPORTED_PLOTS}")
  
@@ -111,6 +115,7 @@ def plot_data(**kwargs) -> bool:
     # included in kwargs
     crimes_by_year = kwargs.get("crimes_by_year", False)
     crimes_by_month = kwargs.get("crimes_by_month", False)
+    crimes_by_type = kwargs.get("crimes_by_type", False)
 
     # We try reading from the processed file first, if
     # the file exists, set a variable indicating that
@@ -156,7 +161,15 @@ def plot_data(**kwargs) -> bool:
         crimes_by_month_flag = plot_crimes_by_month(data=data, outfile_name="crimes_by_month", sort_months='year_order')
 
         if not crimes_by_month_flag:
-            print("There was an error plotting the number of crimes per months from the data")
+            print("There was an error plotting the number of crimes per month from the data")
+            return False
+        
+    if crimes_by_type:
+
+        crimes_by_type_flag = plot_crimes_by_type(data=data, outfile_name="crimes_by_type")
+
+        if not crimes_by_type_flag:
+            print("There was an error plotting the number of crimes by type from the data")
             return False
         
     return True
@@ -234,7 +247,6 @@ def plot_crimes_by_year(data: pd.DataFrame, outfile_name: str) -> bool:
         return True
     
     except Exception as e:
-        print(e)
         print("There was an error saving the plot to the specified location")
         return False
     
@@ -367,5 +379,100 @@ def plot_crimes_by_month(data: pd.DataFrame, outfile_name: str, sort_months: str
     except Exception as e:
 
         print("There was an error saving the file to the specified location")
+    
+    return True
+
+def plot_crimes_by_type(data: pd.DataFrame, outfile_name: str) -> bool:
+
+    assert(
+        {"reported_date", "offense_type_id"}.issubset(set(data.columns))
+    ), "columns `reported_date` and `offense_type_id` expected but not found in dataset"
+
+    # here we convert the dates of the reported crimes into datetime objects so we
+    # can grab important information from the date without having to split the date
+    # into separate strings ourselves
+    data["reported_date"] = pd.to_datetime(data["reported_date"], format='mixed')
+
+    try:
+        # collect the year of the reported crimes
+        data["reported_year"] = data["reported_date"].apply(lambda x: x.year)
+
+        # get the counts of crimes that occurred
+        crime_counts = data["offense_category_id"].value_counts().to_dict()
+
+        # order the crimes by the amount of reports
+        ordered_crimes = sorted(crime_counts, key=lambda x: crime_counts[x])
+        
+        # create the data object used for plotting
+        for_plot = {
+            'crimes': ordered_crimes,
+        }
+
+        # iterate through the years in the dataset and collect the crimes counts by
+        # year
+        years = sorted(data["reported_year"].unique())
+
+        for year in years:
+
+            year_crime_counts = data.query("reported_year == @year")["offense_category_id"].value_counts().to_dict()
+
+            ordered_year_crime_counts = []
+
+            for crime in ordered_crimes:
+
+                ordered_year_crime_counts.append(year_crime_counts.get(crime, 0))
+
+            for_plot.update({
+                str(year): ordered_year_crime_counts
+            })
+
+            str_years = [str(year) for year in years]
+
+    except Exception as e:
+
+        print("There was an error processing the data prior to plotting")
+        return False
+   
+    try:
+
+        p = figure(
+            x_range=ordered_crimes,
+            y_range=(0, max(crime_counts.values()) + 10000),
+            height=350,
+            width=1000,
+            title="Crime Counts by Crime Type",
+            toolbar_location=None
+        )
+
+        p.vbar_stack(
+            str_years,
+            x="crimes",
+            width=0.9,
+            color=Bokeh6,
+            source=for_plot,
+            legend_label=str_years
+        )
+
+        p.title.align="center"
+        p.y_range.start = 0
+        p.x_range.range_padding = 0.1
+        p.xgrid.grid_line_color=None
+        p.axis.minor_tick_line_color = None
+        p.outline_line_color = None
+        p.legend.location = "top_left"
+        p.legend.orientation = "horizontal"
+        p.xaxis.major_label_orientation = pi/4
+
+    except Exception as e:
+        print("There was an error creating the plot for the data by crime type")
+        return False
+    
+    try:
+
+        export_png(p, filename=os.path.join(PLOTS_DIR, f"{outfile_name}.png"))
+
+    except Exception as e:
+        print("There was an error saving the plot to the specified directory")
+        return False
     
     return True
