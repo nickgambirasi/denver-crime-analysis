@@ -79,7 +79,7 @@ while actions:
                 sys.exit("There was an error collecting the data")
 
         case 'process':
-            flag = process_data(normalization='lower')
+            flag = process_data(normalization='lower', handle_na='drop_row')
             if not flag:
                 sys.exit("There was an error processing the data")
 

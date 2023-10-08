@@ -568,5 +568,8 @@ def plot_crimes_by_neighborhood(data: pd.DataFrame, order_neighborhoods: str=['f
     
     return True
 
+def plot_crime_heatmap_by_county(data: pd.DataFrame, outfile_name: str) -> bool:
 
-    
+    """
+    Function that plots the crimes on a heatmap by county
+    """

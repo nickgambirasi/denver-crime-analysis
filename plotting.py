@@ -62,12 +62,11 @@ def plot_data(**kwargs) -> bool:
             that have occurred in each season, beginning
             with winter 2018 and ending with fall 2023
 
-
-    Arguments to be supported in the future:
-
         - `crimes_by_neighborhood`: plots the count of
             crimes that have occurred in each neighbor-
             hood over the course of data collection
+
+    Arguments to be supported in the future:
 
         - `county_crime_heatmap`: plots a count of the
             the selected crime (will require a dropdown)
